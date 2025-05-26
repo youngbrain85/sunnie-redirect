@@ -191,6 +191,10 @@
             font-weight: bold;
         }
         
+        .truncated:hover {
+            background-color: #f0f0f0;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -333,7 +337,12 @@
                             복사
                         </button>
                     </td>
-                    <td class="url" title="${redirectUrl}">${truncateUrl(redirectUrl)}</td>
+                    <td class="url truncated" 
+                        title="${redirectUrl}" 
+                        onclick="showFullUrl('${key}', '${redirectUrl.replace(/'/g, "\\'")}')"
+                        style="cursor: pointer;">
+                        <span id="redirect_${key}">${truncateUrl(redirectUrl)}</span>
+                    </td>
                 `;
                 tbody.appendChild(row);
             }
@@ -399,6 +408,23 @@
                 } else {
                     row.style.display = 'none';
                 }
+            }
+        }
+        
+        function showFullUrl(key, fullUrl) {
+            const span = document.getElementById(`redirect_${key}`);
+            if (!span) return;
+            
+            const currentText = span.textContent;
+            
+            if (currentText.endsWith('...')) {
+                // 전체 URL 표시
+                span.textContent = fullUrl;
+                span.style.fontSize = '0.8em';
+            } else {
+                // 다시 축약
+                span.textContent = truncateUrl(fullUrl);
+                span.style.fontSize = '';
             }
         }
         
