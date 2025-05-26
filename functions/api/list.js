@@ -13,12 +13,31 @@ export async function onRequestGet(context) {
     // 제품 목록 가져오기
     const products = {};
     
-    // 각 키에 대한 값 가져오기
-    for (const key of keys) {
-      if (key.name !== '_metadata' && !key.name.startsWith('stats_')) {
-        const value = await env.REDIRECTS.get(key.name);
+    // 메타데이터에서 오늘 제품 목록 가져오기
+    const todayProducts = metadataObj.today_products || [];
+    
+    // 오늘 제품만 가져오기
+    if (todayProducts.length > 0) {
+      // 오늘 제품 목록이 있으면 해당 제품만
+      for (const productId of todayProducts) {
+        // 내부 메타데이터는 제외
+        if (productId.startsWith('_')) continue;
+        
+        const value = await env.REDIRECTS.get(productId);
         if (value) {
-          products[key.name] = JSON.parse(value);
+          products[productId] = JSON.parse(value);
+        }
+      }
+    } else {
+      // 오늘 제품 목록이 없으면 모든 제품 (기존 방식)
+      for (const key of keys) {
+        if (key.name !== '_metadata' && 
+            !key.name.startsWith('stats_') && 
+            !key.name.startsWith('_')) {  // 언더스코어로 시작하는 내부 키 제외
+          const value = await env.REDIRECTS.get(key.name);
+          if (value) {
+            products[key.name] = JSON.parse(value);
+          }
         }
       }
     }
