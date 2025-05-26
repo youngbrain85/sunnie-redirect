@@ -3,30 +3,40 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const path = url.pathname.substring(1); // "/" 제거
   
-  // 홈페이지 접근 시 대시보드로
-  if (path === '' || path === '/') {
-    return fetch(request);
+  // 정적 파일 요청은 통과
+  if (path === '' || path === 'index.html' || path.includes('.')) {
+    return env.ASSETS.fetch(request);
   }
   
   try {
-    // KV 스토리지에서 리다이렉션 데이터 가져오기
+    // KV가 없으면 에러 대신 ASSETS로 폴백
+    if (!env.REDIRECTS) {
+      console.log('KV not bound, falling back to assets');
+      return env.ASSETS.fetch(request);
+    }
+    
+    // KV에서 리다이렉션 데이터 가져오기
     const redirectData = await env.REDIRECTS.get(path);
     
     if (redirectData) {
       const data = JSON.parse(redirectData);
       
       // 통계 업데이트 (옵션)
-      const stats = await env.REDIRECTS.get(`stats_${path}`) || '{"clicks":0}';
-      const statsData = JSON.parse(stats);
-      statsData.clicks++;
-      statsData.lastClick = new Date().toISOString();
-      await env.REDIRECTS.put(`stats_${path}`, JSON.stringify(statsData));
+      try {
+        const stats = await env.REDIRECTS.get(`stats_${path}`) || '{"clicks":0}';
+        const statsData = JSON.parse(stats);
+        statsData.clicks++;
+        statsData.lastClick = new Date().toISOString();
+        await env.REDIRECTS.put(`stats_${path}`, JSON.stringify(statsData));
+      } catch (e) {
+        console.error('Stats update failed:', e);
+      }
       
       // 301 영구 리다이렉션
       return Response.redirect(data.url, 301);
     }
     
-    // 경로를 찾을 수 없는 경우 메인 추천인 링크로 리다이렉션 시도
+    // 메인 추천인 링크 확인
     const mainData = await env.REDIRECTS.get('main');
     if (mainData) {
       const data = JSON.parse(mainData);
@@ -79,7 +89,8 @@ export async function onRequest(context) {
     });
     
   } catch (error) {
-    console.error('Redirect error:', error);
-    return new Response('Internal Server Error', { status: 500 });
+    console.error('Function error:', error);
+    // 에러 발생시 정적 파일로 폴백
+    return env.ASSETS.fetch(request);
   }
 }
