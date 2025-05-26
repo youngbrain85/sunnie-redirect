@@ -247,8 +247,8 @@
                     <tr>
                         <th>제품명</th>
                         <th>고정 URL (인포크용)</th>
-                        <th>리다이렉션 URL</th>
                         <th>액션</th>
+                        <th>리다이렉션 URL</th>
                     </tr>
                 </thead>
                 <tbody id="productTableBody">
@@ -328,12 +328,12 @@
                 row.innerHTML = `
                     <td>${productName}</td>
                     <td class="url" id="url_${key}">${fixedUrl}</td>
-                    <td class="url" title="${redirectUrl}">${truncateUrl(redirectUrl)}</td>
                     <td>
                         <button class="copy-btn" onclick="copyUrl('${key}')">
                             복사
                         </button>
                     </td>
+                    <td class="url" title="${redirectUrl}">${truncateUrl(redirectUrl)}</td>
                 `;
                 tbody.appendChild(row);
             }
@@ -367,13 +367,12 @@
             if (!urlElement) return;
             
             const url = urlElement.textContent;
-            copyToClipboard(url);
-        }
-        
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                // 복사 성공 알림
-                const btn = event.target;
+            
+            navigator.clipboard.writeText(url).then(() => {
+                // 클릭된 버튼 찾기
+                const btn = document.querySelector(`button[onclick="copyUrl('${key}')"]`);
+                if (!btn) return;
+                
                 const originalText = btn.textContent;
                 btn.textContent = '✓ 복사됨';
                 btn.style.background = '#4CAF50';
