@@ -271,7 +271,7 @@
         async function loadProducts() {
             try {
                 // API에서 실제 데이터 가져오기
-                const response = await fetch('/api/list');
+                const response = await fetch('https://link.sunniecode.com/api/list');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -320,8 +320,8 @@
             for (const [key, product] of Object.entries(products)) {
                 const row = document.createElement('tr');
                 const fixedUrl = `https://${domain}/${key}`;
-                const redirectUrl = product.url || product;
-                const productName = product.original_name || key;
+                const redirectUrl = typeof product === 'string' ? product : (product.url || product);
+                const productName = typeof product === 'object' ? (product.original_name || key) : key;
                 
                 allProducts.push({ key, productName, fixedUrl, redirectUrl });
                 
@@ -353,6 +353,9 @@
         }
         
         function truncateUrl(url) {
+            if (!url || typeof url !== 'string') {
+                return '잘못된 URL';
+            }
             if (url.length > 50) {
                 return url.substring(0, 47) + '...';
             }
