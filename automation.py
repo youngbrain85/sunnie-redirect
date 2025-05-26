@@ -57,7 +57,7 @@ CONFIG = {
         {"url": "https://pharmesthetic.com/shop/product.php?ca_type=1&ca_id=10", "name": "CONAPIDIL"},
         {"url": "https://pharmesthetic.com/shop/product.php?ca_type=1&ca_id=60", "name": "VIBANQUENTMANKA"},
         {"url": "https://pharmesthetic.com/shop/product.php?ca_type=1&ca_id=h0", "name": "AXENDA"},
-        {"url": "https://pharmesthetic.com/shop/product.php?ca_type=1&ca_id=m0", "name": "CRESCINA"}
+        # {"url": "https://pharmesthetic.com/shop/product.php?ca_type=1&ca_id=m0", "name": "CRESCINA"}
     ],
     'SERVER_UPDATE_URL': "https://link.sunniecode.com/api/update",
     'API_KEY': API_KEY,
@@ -538,7 +538,21 @@ def save_data(data, file_path):
 def update_server(data, url, api_key):
     try:
         logger.info(f"Cloudflare 서버에 데이터 업데이트 중...")
+
+        # 먼저 기존 데이터 모두 삭제 (선택사항)
+        clear_url = url.replace('/update', '/clear')
+        clear_headers = {
+            "Content-Type": "application/json",
+            "X-API-KEY": api_key
+        }
         
+        try:
+            clear_response = requests.post(clear_url, headers=clear_headers)
+            if clear_response.status_code == 200:
+                logger.info("기존 데이터 초기화 완료")
+        except:
+            logger.info("데이터 초기화 스킵")
+
         # ID 매핑 파일 로드
         id_mapping_file = "product_id_mapping.json"
         try:
@@ -554,21 +568,32 @@ def update_server(data, url, api_key):
                 max_id = max(max_id, int(pid[1:]))
         next_id = max_id + 1
         
-        # 데이터 포맷팅
+        # 카테고리별 제품 데이터 로드
+        product_data = None
+        if os.path.exists(CONFIG['PRODUCT_DATA_FILE']):
+            try:
+                with open(CONFIG['PRODUCT_DATA_FILE'], 'r', encoding='utf-8') as f:
+                    product_data = json.load(f)
+                logger.info(f"카테고리별 제품 데이터 로드: {sum(len(category) for category in product_data.get('categories', {}).values())}개 제품")
+            except Exception as e:
+                logger.error(f"카테고리별 제품 데이터 로드 실패: {str(e)}")
+        
+        # Flask 앱의 예상 형식으로 데이터 변환
         formatted_data = {
             "_metadata": {
                 "last_updated": int(time.time()),
                 "last_updated_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             },
+            # 메인 링크 추가
             "main": {
                 "url": data["main_referral"],
                 "original_name": "메인 추천인 링크"
             }
         }
         
-        # 맞춤판매 제품 추가
+        # 맞춤판매 제품 추가 (이미 수정됨)
+        custom_count = 0
         for product_name, product_url in data["custom_products"].items():
-            # 기존 ID가 있으면 사용, 없으면 새로 생성
             if product_name in id_mapping:
                 safe_key = id_mapping[product_name]
             else:
@@ -581,12 +606,34 @@ def update_server(data, url, api_key):
                 "original_name": product_name,
                 "type": "custom"
             }
+            custom_count += 1
+        
+        # 카테고리별 제품 추가 (수정 필요!)
+        category_count = 0
+        if product_data and "categories" in product_data:
+            for category_name, products in product_data["categories"].items():
+                for product_name, product_url in products.items():
+                    # ID 매핑 확인 또는 새로 생성
+                    if product_name in id_mapping:
+                        safe_key = id_mapping[product_name]
+                    else:
+                        safe_key = f"p{next_id}"
+                        id_mapping[product_name] = safe_key
+                        next_id += 1
+                    
+                    formatted_data[safe_key] = {
+                        "url": product_url,
+                        "original_name": product_name,
+                        "type": "product",
+                        "category": category_name
+                    }
+                    category_count += 1
         
         # ID 매핑 저장
         with open(id_mapping_file, 'w', encoding='utf-8') as f:
             json.dump(id_mapping, f, ensure_ascii=False, indent=2)
         
-        # 서버로 전송
+        # 요청 전송
         headers = {
             "Content-Type": "application/json",
             "X-API-KEY": api_key
@@ -595,17 +642,17 @@ def update_server(data, url, api_key):
         
         if response.status_code == 200:
             result = response.json()
-            logger.info(f"서버 업데이트 성공! {result.get('count', 0)}개의 링크 업데이트됨")
+            logger.info(f"서버 업데이트 성공! {result.get('count', 0)}개의 링크 업데이트됨 (맞춤판매: {custom_count}, 카테고리별: {category_count})")
             
-            # 새로운 URL 출력
+            # 업데이트된 URL 출력
             logger.info("\n=== 성공! 링크 업데이트 완료 ===")
             logger.info("===== 리디렉션 링크 자동화 완료 =====")
             logger.info("\n자동화 완료! 인포크 링크에서 다음 고정 URL을 사용하세요:")
             logger.info(f"- 메인 추천인 링크: https://link.sunniecode.com/main")
             
-            for product_name, product_id in id_mapping.items():
-                if product_name in data["custom_products"]:
-                    logger.info(f"- {product_name}: https://link.sunniecode.com/{product_id}")
+            # ID 매핑된 모든 제품 출력
+            for product_name, product_id in sorted(id_mapping.items(), key=lambda x: int(x[1][1:]) if x[1][1:].isdigit() else 999):
+                logger.info(f"- {product_name}: https://link.sunniecode.com/{product_id}")
             
             return True
         else:
@@ -679,17 +726,7 @@ def main():
         
         # 서버 업데이트
         update_server(current_data, CONFIG['SERVER_UPDATE_URL'], CONFIG['API_KEY'])
-        
-        # 결과 출력
-        logger.info("\n=== 성공! 링크 업데이트 완료 ===")
-        logger.info("===== 리디렉션 링크 자동화 완료 =====")
-        logger.info("\n자동화 완료! 인포크 링크에서 다음 고정 URL을 사용하세요:")
-        logger.info(f"- 메인 추천인 링크: https://link.sunniecode.com/main")
-
-        for product_name in custom_product_links:
-            formatted_name = product_name.replace(" ", "_")
-            logger.info(f"- {product_name}: https://link.sunniecode.com/{formatted_name}")
-        
+              
     except Exception as e:
         logger.error(f"오류 발생: {str(e)}")
     finally:
