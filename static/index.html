@@ -270,31 +270,24 @@
         
         async function loadProducts() {
             try {
-                // 이 부분은 실제로는 KV를 직접 읽을 수 없으므로
-                // 별도의 API 엔드포인트가 필요합니다
-                // 임시로 하드코딩된 데이터로 표시
-                showDemoData();
+                // API에서 실제 데이터 가져오기
+                const response = await fetch('/api/list');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.products) {
+                    updateDashboard(data.products, data.metadata);
+                } else {
+                    showError('데이터 형식이 올바르지 않습니다.');
+                }
                 
             } catch (error) {
                 console.error('Error loading products:', error);
-                showError('데이터를 불러오는 중 오류가 발생했습니다.');
+                showError('데이터를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
             }
-        }
-        
-        function showDemoData() {
-            // 데모 데이터 (실제로는 API에서 가져와야 함)
-            const demoData = {
-                main: { original_name: "메인 추천인 링크", url: "https://pharmesthetic.com/..." },
-                conapidil: { original_name: "CONAPIDIL", url: "https://pharmesthetic.com/..." },
-                axenda: { original_name: "AXENDA", url: "https://pharmesthetic.com/..." }
-            };
-            
-            const metadata = {
-                last_updated_date: new Date().toISOString(),
-                total_products: 3
-            };
-            
-            updateDashboard(demoData, metadata);
         }
         
         function updateDashboard(products, metadata) {
@@ -334,10 +327,10 @@
                 
                 row.innerHTML = `
                     <td>${productName}</td>
-                    <td class="url">${fixedUrl}</td>
-                    <td class="url">${truncateUrl(redirectUrl)}</td>
+                    <td class="url" id="url_${key}">${fixedUrl}</td>
+                    <td class="url" title="${redirectUrl}">${truncateUrl(redirectUrl)}</td>
                     <td>
-                        <button class="copy-btn" onclick="copyToClipboard('${fixedUrl}')">
+                        <button class="copy-btn" onclick="copyUrl('${key}')">
                             복사
                         </button>
                     </td>
@@ -364,6 +357,14 @@
                 return url.substring(0, 47) + '...';
             }
             return url;
+        }
+        
+        function copyUrl(key) {
+            const urlElement = document.getElementById(`url_${key}`);
+            if (!urlElement) return;
+            
+            const url = urlElement.textContent;
+            copyToClipboard(url);
         }
         
         function copyToClipboard(text) {
