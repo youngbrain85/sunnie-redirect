@@ -608,22 +608,26 @@ def update_server(data, url, api_key):
             }
             custom_count += 1
         
-        # 카테고리별 제품 추가 (수정 필요!)
+        # 카테고리별 제품 추가
         category_count = 0
         if product_data and "categories" in product_data:
             for category_name, products in product_data["categories"].items():
                 for product_name, product_url in products.items():
+                    # 중복 제품명 처리 - 카테고리명 포함
+                    full_product_name = f"{product_name} ({category_name})"
+                    
                     # ID 매핑 확인 또는 새로 생성
-                    if product_name in id_mapping:
-                        safe_key = id_mapping[product_name]
+                    if full_product_name in id_mapping:
+                        safe_key = id_mapping[full_product_name]
                     else:
                         safe_key = f"p{next_id}"
-                        id_mapping[product_name] = safe_key
+                        id_mapping[full_product_name] = safe_key
                         next_id += 1
                     
                     formatted_data[safe_key] = {
                         "url": product_url,
-                        "original_name": product_name,
+                        "original_name": product_name,  # 원래 이름
+                        "display_name": full_product_name,  # 표시용 이름 (카테고리 포함)
                         "type": "product",
                         "category": category_name
                     }
