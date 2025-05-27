@@ -325,7 +325,9 @@
                 const row = document.createElement('tr');
                 const fixedUrl = `https://${domain}/${key}`;
                 const redirectUrl = typeof product === 'string' ? product : (product.url || product);
-                const productName = typeof product === 'object' ? (product.original_name || key) : key;
+                // display_name이 있으면 사용, 없으면 original_name, 그것도 없으면 key
+                const productName = typeof product === 'object' ? 
+                    (product.display_name || product.original_name || key) : key;
                 
                 allProducts.push({ key, productName, fixedUrl, redirectUrl });
                 
