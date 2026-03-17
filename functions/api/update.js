@@ -13,10 +13,11 @@ export async function onRequestPost(context) {
   try {
     const data = await request.json();
     
-    // 메타데이터 저장
+    // ⭐ 수정 1: 확장 프로그램이 보내준 메타데이터(예쁜 시간 포맷)를 버리지 않고 그대로 씁니다.
+    const extMeta = data._metadata || {};
     const metadata = {
-      last_updated: Date.now(),
-      last_updated_date: new Date().toISOString(),
+      last_updated: extMeta.last_updated || Date.now(),
+      last_updated_date: extMeta.last_updated_date || new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
       total_products: 0
     };
     
@@ -26,12 +27,14 @@ export async function onRequestPost(context) {
     
     for (const [key, value] of Object.entries(data)) {
       if (key !== "_metadata") {
-        // KV에 저장할 데이터 형식
+        
+        // ⭐ 수정 2: KV에 저장할 데이터에 'updated_at' 항목을 드디어 추가했습니다!
         const kvData = {
           url: value.url || value,
           original_name: value.original_name || key,
           type: value.type || 'product',
           category: value.category || 'general',
+          updated_at: value.updated_at || '', // 이제 시간을 버리지 않고 저장합니다.
           created_at: new Date().toISOString()
         };
         
