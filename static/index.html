@@ -66,6 +66,14 @@
     </style>
 </head>
 <body>
+    <script>
+        const password = prompt("🌸 관리자 비밀번호를 입력해주세요.");
+        if (password !== "0923") { // "1234" 부분을 원하시는 비밀번호로 바꾸세요!
+            document.body.innerHTML = "<h2 style='text-align:center; margin-top:20vh; color:#FF69B4;'>접근 권한이 없습니다 🚫</h2>";
+            throw new Error("인증 실패"); // 틀리면 화면을 하얗게 만들고 실행 멈춤
+        }
+    </script>
+    <div class="container">
     <div class="container">
         <div class="header">
             <h1>🌸 써니 리다이렉션 서비스</h1>
