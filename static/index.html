@@ -66,14 +66,18 @@
     </style>
 </head>
 <body>
+<body>
     <script>
         const password = prompt("🌸 관리자 비밀번호를 입력해주세요.");
-        if (password !== "0923") { // "1234" 부분을 원하시는 비밀번호로 바꾸세요!
-            document.body.innerHTML = "<h2 style='text-align:center; margin-top:20vh; color:#FF69B4;'>접근 권한이 없습니다 🚫</h2>";
-            throw new Error("인증 실패"); // 틀리면 화면을 하얗게 만들고 실행 멈춤
+        if (password !== "1234") { // "1234" 부분을 원하시는 비밀번호로 바꾸세요
+            // 비밀번호가 틀리면 경고창을 띄우고
+            alert("비밀번호가 틀렸습니다! 접근이 차단됩니다.");
+            // 화면을 하얗게 덮어버린 뒤
+            document.write("<h2 style='text-align:center; margin-top:20vh; color:#FF69B4;'>접근 권한이 없습니다 🚫<br><br>새로고침(F5)을 눌러 다시 시도하세요.</h2>");
+            // 브라우저의 페이지 로딩을 그 자리에서 강제로 끊어버립니다.
+            window.stop(); 
         }
     </script>
-    <div class="container">
     <div class="container">
         <div class="header">
             <h1>🌸 써니 리다이렉션 서비스</h1>
